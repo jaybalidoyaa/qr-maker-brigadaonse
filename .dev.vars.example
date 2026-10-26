@@ -1,0 +1,16 @@
+# Copy this file to `.dev.vars` (which is git-ignored) for local development.
+# Never commit real values.
+
+# REQUIRED. AES-256 key used to encrypt verification tokens at rest.
+# Generate one with:  npm run secret:generate
+# Production: npx wrangler secret put TOKEN_ENCRYPTION_KEY
+TOKEN_ENCRYPTION_KEY=REPLACE_WITH_BASE64_32_BYTE_KEY
+
+# Optional overrides (defaults shown; these mirror wrangler.jsonc vars).
+ENVIRONMENT=development
+PUBLIC_BASE_URL=
+PUBLIC_ADDRESS_MODE=hidden
+PUBLIC_SHOW_PERSONNEL_ID=true
+SESSION_TTL_HOURS=12
+LOGIN_MAX_ATTEMPTS=5
+LOGIN_WINDOW_SECONDS=900

@@ -1,0 +1,31 @@
+{
+  "name": "brigada-onse-qr-verification",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Brigada Onse QR Code Generator and Personnel Verification System — Cloudflare Workers + D1",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:create": "wrangler d1 create brigada-onse-qr",
+    "db:migrate:local": "wrangler d1 migrations apply brigada-onse-qr --local",
+    "db:migrate:remote": "wrangler d1 migrations apply brigada-onse-qr --remote",
+    "db:seed:local": "wrangler d1 execute brigada-onse-qr --local --file ./scripts/seed.sql",
+    "secret:generate": "node ./scripts/generate-key.mjs",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "qrcode-generator": "^1.4.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.152.0"
+  }
+}

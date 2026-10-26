@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Wrangler / Cloudflare local state
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Secrets and private environment files
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Logs and editor files
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Test output
+coverage/

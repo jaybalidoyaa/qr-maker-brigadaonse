@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "brigada-onse-qr-verification",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-26",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "brigada-onse-qr",
+      "database_id": "REPLACE_WITH_ACTUAL_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "development",
+    "PUBLIC_BASE_URL": "",
+    "PUBLIC_ADDRESS_MODE": "hidden",
+    "PUBLIC_SHOW_PERSONNEL_ID": "true",
+    "SESSION_TTL_HOURS": "12",
+    "LOGIN_MAX_ATTEMPTS": "5",
+    "LOGIN_WINDOW_SECONDS": "900"
+  },
+  "env": {
+    "production": {
+      "name": "brigada-onse-qr-verification",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "PUBLIC_BASE_URL": "https://verify.brigadaonse.org",
+        "PUBLIC_ADDRESS_MODE": "hidden",
+        "PUBLIC_SHOW_PERSONNEL_ID": "true",
+        "SESSION_TTL_HOURS": "12",
+        "LOGIN_MAX_ATTEMPTS": "5",
+        "LOGIN_WINDOW_SECONDS": "900"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "brigada-onse-qr",
+          "database_id": "REPLACE_WITH_ACTUAL_D1_DATABASE_ID",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}

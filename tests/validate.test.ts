@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { GROUP_OPTIONS, POSITION_OPTIONS } from '../src/options';
 import { MAX_PHOTO_BYTES, validatePersonnel, validateRenewal } from '../src/validate';
 
 const valid = {
   full_name: 'Juan Dela Cruz',
   address: '123 Sunset Lane, Sun Valley',
-  group_name: 'Alpha Response',
-  position: 'Responder',
+  group_name: GROUP_OPTIONS[1],
+  position: POSITION_OPTIONS[0],
   valid_until: '2027-06-30',
 };
 
@@ -39,6 +40,51 @@ describe('validatePersonnel', () => {
   it('normalises whitespace and strips control characters', () => {
     const result = validatePersonnel({ ...valid, full_name: '  Juan   Dela\u0000\u0007 Cruz  ' });
     expect(result.value.full_name).toBe('Juan Dela Cruz');
+  });
+
+  it('accepts multiple groups and positions from the checkbox form', () => {
+    const result = validatePersonnel({
+      ...valid,
+      group_name: [GROUP_OPTIONS[0], GROUP_OPTIONS[2]],
+      position: [POSITION_OPTIONS[0], POSITION_OPTIONS[4]],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.value.group_name).toBe(`${GROUP_OPTIONS[0]}|${GROUP_OPTIONS[2]}`);
+    expect(result.value.position).toBe(`${POSITION_OPTIONS[0]}|${POSITION_OPTIONS[4]}`);
+  });
+
+  it('accepts an already-joined string (record round-trip on edit)', () => {
+    const joined = `${GROUP_OPTIONS[1]}|${GROUP_OPTIONS[3]}`;
+    const result = validatePersonnel({ ...valid, group_name: joined });
+    expect(result.ok).toBe(true);
+    expect(result.value.group_name).toBe(joined);
+  });
+
+  it('deduplicates repeated selections and trims them', () => {
+    const result = validatePersonnel({
+      ...valid,
+      group_name: [`  ${GROUP_OPTIONS[1]} `, GROUP_OPTIONS[1]],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.value.group_name).toBe(GROUP_OPTIONS[1]);
+  });
+
+  it('requires at least one group and one position', () => {
+    const result = validatePersonnel({ ...valid, group_name: [], position: '' });
+    expect(result.ok).toBe(false);
+    expect(result.errors.group_name).toContain('at least one');
+    expect(result.errors.position).toContain('at least one');
+  });
+
+  it('rejects values outside the canonical option lists', () => {
+    const result = validatePersonnel({
+      ...valid,
+      group_name: [GROUP_OPTIONS[0], 'Made Up Group'],
+      position: ['King'],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.group_name).toContain('Made Up Group');
+    expect(result.errors.position).toContain('King');
   });
 
   it('validates optional personnel IDs', () => {

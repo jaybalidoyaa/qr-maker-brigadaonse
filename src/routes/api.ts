@@ -41,6 +41,7 @@ import {
 import type { PersonnelRow } from '../db';
 import { decryptToken, encryptToken, hashPassword } from '../crypto';
 import { Router, type Ctx } from '../router';
+import { formatMulti, GROUP_OPTIONS, POSITION_OPTIONS } from '../options';
 import { computeStatus, isValidDateString, manilaDateTime, manilaToday, MANILA_TIMEZONE } from '../status';
 import { HttpError, json, parseCookies, randomToken, sha256Hex } from '../util';
 import { validatePersonnel, validateRenewal } from '../validate';
@@ -312,7 +313,14 @@ export function apiRouter(): Router {
 
   r.get('/api/groups', async (ctx) => {
     await requireAuth(ctx);
-    return json({ ok: true, groups: await listGroups(ctx.env) });
+    return json({
+      ok: true,
+      // Canonical selectable options (drive the checkboxes and the filter).
+      groups: GROUP_OPTIONS,
+      positions: POSITION_OPTIONS,
+      // Values currently present in the data, including any legacy rows.
+      stored_groups: await listGroups(ctx.env),
+    });
   });
 
   /* ----------------------------- personnel ------------------------------ */
@@ -400,18 +408,23 @@ export function apiRouter(): Router {
     const body = await readJson(ctx);
 
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined;
-    const asString = (key: string, fallback: string) =>
-      has(key) ? String(body[key] ?? '') : fallback;
+    // Multi-select fields arrive as arrays and must not be stringified (that
+    // would join them with commas); every other field is a plain string.
+    const asValue = (key: string, fallback: string): string | string[] => {
+      if (!has(key)) return fallback;
+      const value = body[key];
+      return Array.isArray(value) ? value.map(String) : String(value ?? '');
+    };
 
     const merged = {
-      personnel_id: asString('personnel_id', existing.personnel_id).toUpperCase(),
-      full_name: asString('full_name', existing.full_name),
-      address: asString('address', existing.address),
-      group_name: asString('group_name', existing.group_name),
-      position: asString('position', existing.position),
-      valid_until: asString('valid_until', existing.valid_until ?? ''),
-      status: asString('status', existing.status),
-      remarks: asString('remarks', existing.remarks ?? ''),
+      personnel_id: String(asValue('personnel_id', existing.personnel_id)).toUpperCase(),
+      full_name: String(asValue('full_name', existing.full_name)),
+      address: String(asValue('address', existing.address)),
+      group_name: asValue('group_name', existing.group_name),
+      position: asValue('position', existing.position),
+      valid_until: String(asValue('valid_until', existing.valid_until ?? '')),
+      status: String(asValue('status', existing.status)),
+      remarks: String(asValue('remarks', existing.remarks ?? '')),
       profile_photo: has('profile_photo') ? (body.profile_photo as string | null) : existing.profile_photo,
     };
 
@@ -635,8 +648,8 @@ export function apiRouter(): Router {
       personnel: {
         full_name: row.full_name,
         ...(publicShowsPersonnelId(ctx.env) ? { personnel_id: row.personnel_id } : {}),
-        group_name: row.group_name,
-        position: row.position,
+        group_name: formatMulti(row.group_name),
+        position: formatMulti(row.position),
         valid_until: isValidDateString(row.valid_until) ? row.valid_until : null,
         record_status: row.status,
         // The residential address is private unless explicitly configured otherwise.

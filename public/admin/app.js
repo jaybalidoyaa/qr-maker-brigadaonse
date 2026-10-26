@@ -10,9 +10,32 @@ const state = {
   list: { q: '', status: '', group: '', page: 1, sort: 'name', order: 'asc', pages: 1, total: 0 },
   audit: { page: 1, pages: 1, total: 0 },
   groups: [],
+  groupOptions: [],
+  positionOptions: [],
   editing: null,
   setupMode: false,
 };
+
+/** Stored multi-values are "|"-joined; display them separated by · */
+function splitMulti(value) {
+  return String(value ?? '').split('|').map((part) => part.trim()).filter(Boolean);
+}
+function fmtMulti(value) {
+  return splitMulti(value).join(' · ');
+}
+
+function checkboxField(label, name, options, selected) {
+  const items = (options || []).map((option) => `
+    <label class="check">
+      <input type="checkbox" name="${name}" value="${esc(option)}" ${selected.includes(option) ? 'checked' : ''} />
+      <span>${esc(option)}</span>
+    </label>`).join('');
+  return `
+    <fieldset class="field checks">
+      <legend>${esc(label)}</legend>
+      <div class="check-list">${items}</div>
+    </fieldset>`;
+}
 
 let detailCache = null;
 
@@ -335,9 +358,8 @@ async function dashboardView() {
   const data = await api('/api/dashboard');
   const c = data.counts;
   const rows = (data.expiring || []).map((r) => `
-    <tr class="clickable" data-id="${r.id}">
-      <td>${esc(r.full_name)}<div class="muted">${esc(r.personnel_id)}</div></td>
-      <td>${esc(r.group_name)}</td>
+    <tr class="clickable" data-id="${r.id}">        <td>${esc(r.full_name)}<div class="muted">${esc(r.personnel_id)}</div></td>
+      <td>${esc(fmtMulti(r.group_name))}</td>
       <td>${esc(r.valid_until || '—')}</td>
       <td>${statusPill(r.status, r.verification_status)}</td>
     </tr>`).join('');
@@ -393,19 +415,20 @@ async function listView() {
     q: state.list.q, status: state.list.status, group: state.list.group,
     page: String(state.list.page), sort: state.list.sort, order: state.list.order, page_size: '20',
   });
-  const [data, groups] = await Promise.all([
+  const [data, options] = await Promise.all([
     api(`/api/personnel?${params}`),
-    state.groups.length ? Promise.resolve({ groups: state.groups }) : api('/api/groups'),
+    state.groupOptions.length ? Promise.resolve({ groups: state.groupOptions }) : api('/api/groups'),
   ]);
-  state.groups = groups.groups || [];
+  state.groupOptions = options.groups || [];
+  state.groups = state.groupOptions;
   state.list.pages = data.pagination.total_pages;
   state.list.total = data.pagination.total;
 
   const rows = data.items.map((r) => `
     <tr class="clickable" data-id="${r.id}">
       <td>${esc(r.full_name)}<div class="muted">${esc(r.personnel_id)}</div></td>
-      <td>${esc(r.group_name)}</td>
-      <td>${esc(r.position)}</td>
+      <td>${esc(fmtMulti(r.group_name))}</td>
+      <td>${esc(fmtMulti(r.position))}</td>
       <td>${esc(r.valid_until || '—')}</td>
       <td>${statusPill(r.status, r.verification_status)}</td>
       <td><span class="btn secondary sm" data-open="${r.id}">Open</span></td>
@@ -504,8 +527,10 @@ async function formView(id) {
     const data = await api(`/api/personnel/${id}`);
     record = data.record;
   }
-  const groups = await api('/api/groups');
-  state.groups = groups.groups || [];
+  const options = await api('/api/groups');
+  state.groups = options.groups || [];
+  state.groupOptions = options.groups || [];
+  state.positionOptions = options.positions || [];
   state.editing = { ...record };
 
   return `
@@ -518,12 +543,8 @@ async function formView(id) {
               <input type="text" name="full_name" value="${esc(record.full_name)}" required /></label>
             <label class="field"><span>Address *</span>
               <textarea name="address" required>${esc(record.address)}</textarea></label>
-            <label class="field"><span>Group *</span>
-              <input type="text" name="group_name" list="group-options" value="${esc(record.group_name)}" required />
-              <datalist id="group-options">${state.groups.map((g) => `<option value="${esc(g)}"></option>`).join('')}</datalist>
-            </label>
-            <label class="field"><span>Position *</span>
-              <input type="text" name="position" value="${esc(record.position)}" required /></label>
+            ${checkboxField('Group *', 'group_name', state.groupOptions, splitMulti(record.group_name))}
+            ${checkboxField('Position *', 'position', state.positionOptions, splitMulti(record.position))}
           </div>
           <div>
             <label class="field"><span>Valid until * (Asia/Manila)</span>
@@ -581,8 +602,9 @@ function bindForm(id) {
     const payload = {
       full_name: fd.get('full_name'),
       address: fd.get('address'),
-      group_name: fd.get('group_name'),
-      position: fd.get('position'),
+      // Multi-select: send every ticked box; the server stores them "|"-joined.
+      group_name: fd.getAll('group_name'),
+      position: fd.getAll('position'),
       valid_until: fd.get('valid_until'),
       personnel_id: fd.get('personnel_id'),
       status: fd.get('status'),
@@ -621,7 +643,7 @@ async function detailView(id) {
           : `<div class="avatar">${esc(r.full_name.slice(0, 1).toUpperCase())}</div>`}
         <div style="flex:1">
           <h2 style="font-size:19px;margin:0 0 4px">${esc(r.full_name)}</h2>
-          <div class="muted">${esc(r.position)} · ${esc(r.group_name)}</div>
+          <div class="muted">${esc(fmtMulti(r.position))} · ${esc(fmtMulti(r.group_name))}</div>
           <div style="margin-top:8px">${statusPill(r.status, r.verification_status)} ${expiry}</div>
         </div>
         <div class="actions">
@@ -634,6 +656,8 @@ async function detailView(id) {
         <div>
           <dl class="kv">
             <dt>Personnel ID</dt><dd>${esc(r.personnel_id)}</dd>
+            <dt>Group</dt><dd>${esc(fmtMulti(r.group_name))}</dd>
+            <dt>Position</dt><dd>${esc(fmtMulti(r.position))}</dd>
             <dt>Address</dt><dd>${esc(r.address)}</dd>
             <dt>Valid until</dt><dd>${esc(r.valid_until || '—')}</dd>
             <dt>Status</dt><dd>${esc(r.status)}</dd>
@@ -806,8 +830,8 @@ async function printIdCard(id) {
       ${photo}
       <div>
         <div class="name">${esc(r.full_name)}</div>
-        <div class="role">${esc(r.position)}</div>
-        <div class="role">${esc(r.group_name)}</div>
+        <div class="role">${esc(fmtMulti(r.position))}</div>
+        <div class="role">${esc(fmtMulti(r.group_name))}</div>
       </div>
     </div>
     <div class="kv">
@@ -878,7 +902,7 @@ async function expiringView() {
   const rows = (list) => list.filter(isExpired).map((r) => `
     <tr class="clickable" data-id="${r.id}">
       <td>${esc(r.full_name)}<div class="muted">${esc(r.personnel_id)}</div></td>
-      <td>${esc(r.group_name)}</td>
+      <td>${esc(fmtMulti(r.group_name))}</td>
       <td>${esc(r.valid_until)}</td>
       <td>${daysSince(r.valid_until)} day(s) ago</td>
       <td>${statusPill(r.status, r.verification_status)}</td>
@@ -887,7 +911,7 @@ async function expiringView() {
   const soon = windowRes.items.filter((r) => !isExpired(r) && r.valid_until).map((r) => `
     <tr class="clickable" data-id="${r.id}">
       <td>${esc(r.full_name)}<div class="muted">${esc(r.personnel_id)}</div></td>
-      <td>${esc(r.group_name)}</td>
+      <td>${esc(fmtMulti(r.group_name))}</td>
       <td>${esc(r.valid_until)}</td>
       <td>${daysUntil(r.valid_until)} day(s) left</td>
       <td>${statusPill(r.status, r.verification_status)}</td>
@@ -896,7 +920,7 @@ async function expiringView() {
   const suspended = suspendedRes.items.map((r) => `
     <tr class="clickable" data-id="${r.id}">
       <td>${esc(r.full_name)}<div class="muted">${esc(r.personnel_id)}</div></td>
-      <td>${esc(r.group_name)}</td>
+      <td>${esc(fmtMulti(r.group_name))}</td>
       <td>${esc(r.valid_until || '—')}</td>
       <td>—</td>
       <td>${statusPill('suspended')}</td>

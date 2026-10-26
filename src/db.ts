@@ -85,8 +85,11 @@ function buildFilters(query: ListQuery): { sql: string; binds: (string | number)
     binds.push(query.status);
   }
   if (query.group) {
-    where.push('group_name = ?');
-    binds.push(query.group);
+    // group_name can hold several "|"-separated values; match one individual
+    // group. Wrapping both sides also matches legacy single-value rows.
+    const escaped = query.group.replace(/[\\%_]/g, (m) => `\\${m}`);
+    where.push(`('|' || group_name || '|' LIKE ? ESCAPE '\\')`);
+    binds.push(`%|${escaped}|%`);
   }
   if (query.expiringBefore !== undefined) {
     // ISO dates compare chronologically as strings.

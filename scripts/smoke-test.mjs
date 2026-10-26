@@ -71,6 +71,10 @@ const today = new Date().toISOString().slice(0, 10);
 const futureDate = '2030-12-31';
 const pastDate = '2020-01-01';
 
+// Canonical options (mirror src/options.ts)
+const BRIGADA_GROUP = 'Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Incorporated';
+const GRIFFIN_GROUP = 'Griffin Fire and Rescue Volunteer Group';
+
 async function main() {
   console.log(`Smoke test against ${BASE}\n`);
 
@@ -157,13 +161,17 @@ async function main() {
   const created = await call('POST', '/api/personnel', {
     full_name: 'Juan Dela Cruz',
     address: '123 Sunset Lane, Sun Valley, Parañaque',
-    group_name: 'Alpha Response',
-    position: 'Responder',
+    group_name: [BRIGADA_GROUP, GRIFFIN_GROUP],
+    position: ['Volunteer', 'Officer'],
     valid_until: futureDate,
     remarks: 'Synthetic test record',
   }, { origin: ORIGIN });
   check('POST /api/personnel creates a record (201)', created.status === 201, `got ${created.status}`);
   const rec = created.data?.record;
+  check('multiple groups are stored as a multi-value field',
+    rec?.group_name === `${BRIGADA_GROUP}|${GRIFFIN_GROUP}`, rec?.group_name);
+  check('multiple positions are stored as a multi-value field',
+    rec?.position === 'Volunteer|Officer', rec?.position);
   check('record has a personnel ID', /^[A-Z]{2,}-\d{4}-[A-Z0-9]+$/.test(rec?.personnel_id ?? ''),
     rec?.personnel_id);
   check('record has a verification URL with a long random token',
@@ -174,18 +182,28 @@ async function main() {
   const dupId = await call('POST', '/api/personnel', {
     full_name: 'Duplicate Person',
     address: '456 Other Street',
-    group_name: 'Beta Response',
-    position: 'Responder',
+    group_name: ['Not Available'],
+    position: ['Barangay Personnel'],
     valid_until: futureDate,
     personnel_id: rec.personnel_id,
   }, { origin: ORIGIN });
   check('duplicate Personnel ID returns 409', dupId.status === 409, `got ${dupId.status}`);
 
+  const badGroup = await call('POST', '/api/personnel', {
+    full_name: 'Bad Group Person',
+    address: '1 Test Street',
+    group_name: ['Made Up Group'],
+    position: ['Volunteer'],
+    valid_until: futureDate,
+  }, { origin: ORIGIN });
+  check('unknown group option is rejected (422)',
+    badGroup.status === 422 && Boolean(badGroup.data?.details?.group_name), `got ${badGroup.status}`);
+
   const second = await call('POST', '/api/personnel', {
     full_name: 'Expired Test Person',
     address: '789 Lapsed Avenue',
-    group_name: 'Gamma Response',
-    position: 'Reserve',
+    group_name: ['Don Bosco Fire and Rescue Volunteer Group'],
+    position: ['Candidate'],
     valid_until: pastDate,
   }, { origin: ORIGIN });
   check('second record created (201)', second.status === 201);
@@ -216,14 +234,21 @@ async function main() {
   const updated = await call('PUT', `/api/personnel/${rec.id}`, {
     full_name: 'Juan Dela Cruz-Reyes',
     address: '123 Sunset Lane, Sun Valley, Parañaque',
-    group_name: 'Alpha Response',
-    position: 'Team Lead',
+    group_name: [BRIGADA_GROUP, GRIFFIN_GROUP],
+    position: ['Regular'],
     valid_until: futureDate,
   }, { origin: ORIGIN });
   check('PUT /api/personnel/:id updates the record (200)', updated.status === 200, `got ${updated.status}`);
   check('verification URL is unchanged after an edit',
     before.data?.record?.verification_url === updated.data?.record?.verification_url);
-  check('updated field is persisted', updated.data?.record?.position === 'Team Lead');
+  check('updated field is persisted', updated.data?.record?.position === 'Regular');
+  check('multi-value groups survive an edit',
+    updated.data?.record?.group_name === `${BRIGADA_GROUP}|${GRIFFIN_GROUP}`);
+
+  const groupFilter = await call('GET', `/api/personnel?group=${encodeURIComponent(GRIFFIN_GROUP)}`);
+  check('filtering by one of several groups finds the record',
+    groupFilter.status === 200 && groupFilter.data?.items?.some((r) => r.id === rec.id),
+    `got ${groupFilter.status}`);
 
   /* ------------------------------------------------------------------- QR */
   console.log('\nQR generation');
@@ -259,6 +284,13 @@ async function main() {
     !JSON.stringify(apiVerify.data).includes('Sun Valley, Parañaque'));
   check('public verify API shows approved fields',
     apiVerify.data?.personnel?.personnel_id === rec.personnel_id);
+  check('public verify API formats multi-values for display',
+    apiVerify.data?.personnel?.group_name === `${BRIGADA_GROUP} · ${GRIFFIN_GROUP}`,
+    apiVerify.data?.personnel?.group_name);
+  check('public verify page renders multi-values',
+    page.text.includes('Griffin Fire and Rescue Volunteer Group'));
+  check('public verify API never leaks the storage delimiter',
+    !JSON.stringify(apiVerify.data).includes('|'));
 
   const unknown = await call('GET', '/api/verify/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   check('unknown token reports INVALID', unknown.data?.status === 'INVALID');

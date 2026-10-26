@@ -16,6 +16,17 @@ record's current status served straight from D1 — no client-side caching, no s
 **Registration & QR issuance**
 - Registration form: Full Name, Address, Group, Position, Valid Until (required) plus
   Personnel ID, Profile Photo, Status, Date Registered, Last Updated, Created By, Remarks.
+- **Group and Position are multi-select checkbox fields** — a person may hold several at
+  once. The canonical lists live in [`src/options.ts`](src/options.ts) (single source of
+  truth for the form, the directory filter, server-side validation and the verification
+  page) and are returned to the frontend by `GET /api/groups`:
+  - **Group** — Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Incorporated ·
+    Don Bosco Fire and Rescue Volunteer Group · Griffin Fire and Rescue Volunteer Group ·
+    Not Available
+  - **Position** — Volunteer · Candidate · Regular · Barangay Personnel · Officer
+  Values are stored `|`-joined (a comma appears inside one group name), displayed as
+  `A · B`, and validated against the lists so the directory cannot drift; add an option by
+  appending it in `src/options.ts`.
 - Save first, then generate the QR — the QR URL is minted once at creation and never changes,
   even after edits or renewals.
 - Each record carries a unique human Personnel ID and a **separate 256-bit random verification

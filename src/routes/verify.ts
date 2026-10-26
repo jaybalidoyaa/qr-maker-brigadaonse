@@ -3,6 +3,7 @@
  * Always reflects current database state (no client-side data fetching).
  */
 
+import { formatMulti } from '../options';
 import { publicAddressMode, publicShowsPersonnelId, type Env } from '../config';
 import { getPersonnelByTokenHash } from '../db';
 import { recordVerificationEvent } from '../db';
@@ -79,15 +80,15 @@ export async function renderVerifyPage(env: Env, request: Request, token: string
       ${showPhoto ? `<img class="photo" src="${escapeHtml(record.profile_photo)}" alt="Profile photo of ${escapeHtml(record.full_name)}">` : ''}
       <div>
         <h2>${escapeHtml(record.full_name)}</h2>
-        <p class="sub">${escapeHtml(record.position)} · ${escapeHtml(record.group_name)}</p>
+        <p class="sub">${escapeHtml(formatMulti(record.position))} · ${escapeHtml(formatMulti(record.group_name))}</p>
       </div>
     </div>`;
 
   const details = `
     <dl>
       ${publicShowsPersonnelId(env) ? row('Personnel ID', record.personnel_id, true) : ''}
-      ${row('Group', record.group_name)}
-      ${row('Position', record.position)}
+      ${row('Group', formatMulti(record.group_name))}
+      ${row('Position', formatMulti(record.position))}
       ${row('Valid Until', isValidDateString(record.valid_until) ? record.valid_until : 'Not specified')}
       ${row('Record Status', record.status.toUpperCase())}
       ${publicAddressMode(env) === 'full' ? row('Address', record.address) : ''}

@@ -3,6 +3,7 @@
  * field->message map so the frontend can highlight invalid inputs.
  */
 
+import { GROUP_OPTIONS, POSITION_OPTIONS, splitMulti } from './options';
 import { isValidDateString } from './status';
 
 export interface PersonnelPayload {
@@ -25,6 +26,36 @@ export interface ValidationResult {
 
 const PERSONNEL_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{1,31}$/;
 const STATUS_VALUES = ['active', 'suspended', 'revoked'] as const;
+
+/**
+ * Normalises a multi-select field (array from the form, or a "|"-joined
+ * string from an existing record) into the stored representation. Rejects
+ * unknown options so the directory never drifts from the canonical lists.
+ */
+function multiValue(
+  raw: unknown,
+  options: readonly string[],
+  label: string,
+  key: string,
+  errors: Record<string, string>,
+): string {
+  const items = Array.isArray(raw) ? raw : splitMulti(typeof raw === 'string' ? raw : '');
+  const values: string[] = [];
+  for (const item of items) {
+    const value = String(item).replace(/\s+/g, ' ').trim();
+    if (value && !values.includes(value)) values.push(value);
+  }
+
+  if (values.length === 0) {
+    errors[key] = `${label} is required — select at least one option.`;
+    return '';
+  }
+  const unknown = values.filter((value) => !(options as readonly string[]).includes(value));
+  if (unknown.length > 0) {
+    errors[key] = `Unknown ${label.toLowerCase()} selection: ${unknown.join(', ')}.`;
+  }
+  return values.join('|');
+}
 const PHOTO_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=\s]+$/;
 export const MAX_PHOTO_BYTES = 256 * 1024;
 
@@ -53,16 +84,14 @@ export function validatePersonnel(body: unknown): ValidationResult {
 
   const full_name = cleanText(src.full_name, 120);
   const address = typeof src.address === 'string' ? cleanMultiline(src.address, 400).trim() : '';
-  const group_name = cleanText(src.group_name, 80);
-  const position = cleanText(src.position, 80);
+  const group_name = multiValue(src.group_name, GROUP_OPTIONS, 'Group', 'group_name', errors);
+  const position = multiValue(src.position, POSITION_OPTIONS, 'Position', 'position', errors);
   const valid_until = cleanText(src.valid_until, 10);
   const personnel_id = cleanText(src.personnel_id, 32);
   const remarks = cleanMultiline(src.remarks, 1000);
 
   if (full_name.length < 2) errors.full_name = 'Full name is required (at least 2 characters).';
   if (address.length < 2) errors.address = 'Address is required (at least 2 characters).';
-  if (group_name.length < 2) errors.group_name = 'Group is required.';
-  if (position.length < 2) errors.position = 'Position is required.';
   if (!isValidDateString(valid_until)) {
     errors.valid_until = 'Valid Until must be a real date in YYYY-MM-DD format.';
   }

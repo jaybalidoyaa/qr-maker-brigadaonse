@@ -244,7 +244,10 @@ function loginView() {
         <label class="field"><span>Username</span>
           <input type="text" name="username" autocomplete="username" required /></label>
         <label class="field"><span>Password</span>
-          <input type="password" name="password" autocomplete="${state.setupMode ? 'new-password' : 'current-password'}" required /></label>
+          <input type="password" name="password" autocomplete="${state.setupMode ? 'new-password' : 'current-password'}"
+            ${state.setupMode ? 'minlength="12" required' : 'required'} />${state.setupMode
+              ? '<div class="muted" style="font-size:11.5px;margin-top:4px">At least 12 characters. You will use this to sign in.</div>'
+              : ''}</label>
         ${state.setupMode ? `
         <label class="field"><span>Display name (optional)</span>
           <input type="text" name="display_name" /></label>` : ''}
@@ -294,9 +297,36 @@ function bindLogin() {
       go('/dashboard');
       render();
     } catch (err) {
-      errBox.innerHTML = `<div class="alert error">${esc(err.message)}</div>`;
+      showFormErrors(err, form, errBox);
     }
   });
+}
+
+/** Renders server-side validation into the sign-in / setup form, field by field. */
+function showFormErrors(err, form, errBox) {
+  form.querySelectorAll('.err').forEach((n) => n.remove());
+  form.querySelectorAll('.field-error').forEach((n) => n.classList.remove('field-error'));
+
+  const details = err.details;
+  if (details && typeof details === 'object' && Object.keys(details).length) {
+    let shown = 0;
+    for (const [field, message] of Object.entries(details)) {
+      const input = form.querySelector(`[name="${field}"]`);
+      if (!input) continue;
+      input.closest('.field')?.classList.add('field-error');
+      const note = document.createElement('div');
+      note.className = 'err';
+      note.textContent = message;
+      input.insertAdjacentElement('afterend', note);
+      shown += 1;
+    }
+    if (shown) {
+      errBox.innerHTML = '';
+      form.querySelector('.field-error input')?.focus();
+      return;
+    }
+  }
+  errBox.innerHTML = `<div class="alert error">${esc(err.message)}</div>`;
 }
 
 /* ---------------------------------------------------------------- dashboard */

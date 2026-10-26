@@ -10,7 +10,7 @@ export interface Env {
   TOKEN_ENCRYPTION_KEY?: string;
 
   ENVIRONMENT?: string;
-  /** Absolute origin used to build QR URLs, e.g. https://verify.brigadaonse.org. Empty = derive from request. */
+  /** Absolute origin used to build QR URLs, e.g. https://qr.brigadaonse.org. Empty = derive from request. */
   PUBLIC_BASE_URL?: string;
   /** "hidden" (default) never shows the residential address publicly; "full" shows it. */
   PUBLIC_ADDRESS_MODE?: string;

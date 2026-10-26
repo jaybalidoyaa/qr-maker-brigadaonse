@@ -1,7 +1,7 @@
 # Brigada Onse QR Code Generator & Personnel Verification System
 
 **Organization:** Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc.
-**Public verification domain:** `https://verify.brigadaonse.org`
+**Public verification domain:** `https://qr.brigadaonse.org`
 **Stack:** Cloudflare Workers (TypeScript) · Cloudflare D1 · Workers Static Assets · Wrangler
 
 A Cloudflare-native registration, QR issuance and public verification system for volunteer
@@ -155,7 +155,7 @@ Migrations are additive; nothing drops or resets a table.
 [`wrangler.jsonc`](wrangler.jsonc) — worker name `brigada-onse-qr-verification`,
 entry `src/index.ts`, `compatibility_date` `2026-10-26`, static assets `./public` bound to
 `ASSETS`, D1 binding `DB` → database `brigada-onse-qr` with `migrations_dir: "migrations"`,
-and an `env.production` block that adds the `verify.brigadaonse.org` custom domain,
+and an `env.production` block that adds the `qr.brigadaonse.org` custom domain,
 production variables and `workers_dev: true`.
 
 **Status: configured.** The real database ID `aa53163e-cf6a-4906-8cba-769398d7c045`
@@ -171,7 +171,7 @@ production variables and `workers_dev: true`.
 |---|---|---|---|
 | `TOKEN_ENCRYPTION_KEY` | **yes (secret)** | – | base64 32-byte AES-256 key for token encryption |
 | `ENVIRONMENT` | no | `development` | informational |
-| `PUBLIC_BASE_URL` | no | derived from request | origin used to build QR URLs (set `https://verify.brigadaonse.org`) |
+| `PUBLIC_BASE_URL` | no | derived from request | origin used to build QR URLs (set `https://qr.brigadaonse.org`) |
 | `PUBLIC_ADDRESS_MODE` | no | `hidden` | `full` shows the residential address publicly |
 | `PUBLIC_SHOW_PERSONNEL_ID` | no | `true` | `false` hides the Personnel ID publicly |
 | `SESSION_TTL_HOURS` | no | `12` | session lifetime |
@@ -263,19 +263,27 @@ enabled.
 
 ---
 
-## 9. Custom domain: `verify.brigadaonse.org`
+## 9. Custom domain: `qr.brigadaonse.org`
 
 **Configured and verified on 2026-10-26.** The route lives in `wrangler.jsonc`:
 
 ```jsonc
-"routes": [{ "pattern": "verify.brigadaonse.org", "custom_domain": true }]
+"routes": [{ "pattern": "qr.brigadaonse.org", "custom_domain": true }]
 ```
+
+> The host was originally provisioned as `verify.brigadaonse.org` and changed to
+> `qr.brigadaonse.org` the same day. The route, `PUBLIC_BASE_URL`, the landing-page example
+> and every QR URL now use the new host, and the old host is no longer attached to the
+> Worker (it returns 530 / NXDOMAIN). Because the production database held **0 personnel
+> records** at the changeover, no printed QR codes needed reissuing. If you ever rename the
+> host again after printing cards, every existing QR keeps working only if you keep the old
+> host routed to the Worker as an alias.
 
 Deployed with `npx wrangler deploy --env production`, which created the custom-domain
 binding and its DNS record in the `brigadaonse.org` zone (already on the account).
 
 Verified: public resolvers (1.1.1.1, 8.8.8.8) return the Cloudflare addresses,
-`https://verify.brigadaonse.org/api/health` returns 200 with a valid certificate
+`https://qr.brigadaonse.org/api/health` returns 200 with a valid certificate
 (`ssl_verify_result = 0`), `/` and `/admin/` return 200, protected APIs return 401, and an
 unknown token returns the 404 INVALID page. Note that a local router's DNS cache can lag by
 a few minutes — query a public resolver if a fresh machine cannot resolve it yet.
@@ -306,13 +314,14 @@ is why the dashboard reports **“Missing git connection.”**
 | Remote migrations `0001_init.sql`, `0002_auth_infra.sql` applied | ✅ done — all 6 tables present |
 | `TOKEN_ENCRYPTION_KEY` secret set for the `production` environment | ✅ done (value never printed or committed) |
 | `npx wrangler deploy --env production` | ✅ done — version `d8a6851e-4e13-4b55-b2b0-d92e77a43d00` |
-| Custom domain `verify.brigadaonse.org` attached + DNS record created | ✅ done |
+| Custom domain `qr.brigadaonse.org` attached + DNS record created | ✅ done |
+| Domain switched `verify.` → `qr.` (route, `PUBLIC_BASE_URL`, docs) + redeploy | ✅ done — version `a06f2f39-4c87-4c74-af4a-12cc15dd6944` |
 | Live checks: `/api/health` 200, `/` 200, `/admin/` 200, `/api/personnel` 401, `/verify/<bad>` 404+INVALID, TLS valid | ✅ passed |
 | Fallback URL `https://brigada-onse-qr-verification.balidoyajayson.workers.dev` | ✅ enabled |
 
 **Still to do (owner):**
 
-1. **Create the first administrator** — open `https://verify.brigadaonse.org/admin/`, click
+1. **Create the first administrator** — open `https://qr.brigadaonse.org/admin/`, click
    *“First time? Set up the administrator account”* and choose the production password.
    This was deliberately **not** done during deployment, so no default or machine-chosen
    production credential exists. Until then every admin API returns 401.

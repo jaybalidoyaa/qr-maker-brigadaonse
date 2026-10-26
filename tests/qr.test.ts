@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { qrToPng, qrToSvg } from '../src/qr';
 import { encodePng } from '../src/png';
 
-const URL_PAYLOAD = 'https://verify.brigadaonse.org/verify/aB3x9_K2mQ7pL0sT5uW8yZ1cE4gH6jN0rV';
+const URL_PAYLOAD = 'https://qr.brigadaonse.org/verify/aB3x9_K2mQ7pL0sT5uW8yZ1cE4gH6jN0rV';
 
 function readChunk(bytes: Uint8Array, offset: number) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -69,7 +69,7 @@ describe('QR rendering', () => {
     // Different payloads must yield different artwork; same payload is stable.
     const a = qrToSvg(URL_PAYLOAD);
     const b = qrToSvg(URL_PAYLOAD);
-    const c = qrToSvg('https://verify.brigadaonse.org/verify/OTHER_TOKEN_VALUE_12345');
+    const c = qrToSvg('https://qr.brigadaonse.org/verify/OTHER_TOKEN_VALUE_12345');
     expect(a).toBe(b);
     expect(a).not.toBe(c);
   });

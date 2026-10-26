@@ -32,7 +32,7 @@
       "name": "brigada-onse-qr-verification",
       "routes": [
         {
-          "pattern": "verify.brigadaonse.org",
+          "pattern": "qr.brigadaonse.org",
           "custom_domain": true
         }
       ],
@@ -40,7 +40,7 @@
       "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "production",
-        "PUBLIC_BASE_URL": "https://verify.brigadaonse.org",
+        "PUBLIC_BASE_URL": "https://qr.brigadaonse.org",
         "PUBLIC_ADDRESS_MODE": "hidden",
         "PUBLIC_SHOW_PERSONNEL_ID": "true",
         "SESSION_TTL_HOURS": "12",

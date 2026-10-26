@@ -17,6 +17,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Scratch space for asset generation
+.tmp-assets/
+
 # Logs and editor files
 *.log
 npm-debug.log*

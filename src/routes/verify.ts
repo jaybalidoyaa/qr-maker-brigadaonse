@@ -5,50 +5,68 @@
 
 import { formatMulti } from '../options';
 import { publicAddressMode, publicShowsPersonnelId, type Env } from '../config';
-import { getPersonnelByTokenHash } from '../db';
-import { recordVerificationEvent } from '../db';
+import { getPersonnelByTokenHash, recordVerificationEvent } from '../db';
 import { computeStatus, isValidDateString, manilaDateTime, MANILA_TIMEZONE } from '../status';
 import { escapeHtml, html, sha256Hex } from '../util';
 
 const ORGANIZATION = 'Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc.';
-const ORGANIZATION_SHORT = 'Brigada Onse';
 
 const STYLES = `
-:root{--bg:#0f172a;--card:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
---valid:#15803d;--valid-bg:#dcfce7;--expired:#b45309;--expired-bg:#fef3c7;
---suspended:#c2410c;--suspended-bg:#ffedd5;--revoked:#b91c1c;--revoked-bg:#fee2e2;
---invalid:#b91c1c;--invalid-bg:#fee2e2;--brand:#b91c1c}
+:root{
+  --navy-900:#060223;--navy-800:#0c0733;--navy-700:#16114b;
+  --gold:#f1d022;--gold-deep:#cdb351;
+  --ink:#0b0a1f;--muted:#6b7386;--line:#e6e8f0;
+  --valid:#12833f;--valid-bg:#dcf7e5;
+  --expired:#a45a08;--expired-bg:#fef2d7;
+  --suspended:#b3560b;--suspended-bg:#ffedd7;
+  --revoked:#b3121b;--revoked-bg:#fde8e9;
+}
 *{box-sizing:border-box}
-body{margin:0;background:linear-gradient(160deg,#0f172a 0%,#1e293b 100%);
-font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.wrap{width:100%;max-width:460px}
-.org{display:flex;align-items:center;gap:12px;color:#e2e8f0;margin-bottom:16px;justify-content:center}
-.crest{width:44px;height:44px;border-radius:50%;background:var(--brand);color:#fff;display:flex;
-align-items:center;justify-content:center;font-weight:800;font-size:15px;letter-spacing:.5px;
-border:2px solid rgba(255,255,255,.35)}
-.org h1{font-size:15px;margin:0;line-height:1.3;font-weight:700}
-.org p{margin:2px 0 0;font-size:12px;color:#94a3b8}
-.card{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.35)}
-.banner{padding:20px;text-align:center}
-.banner .status{display:inline-block;font-size:22px;font-weight:800;letter-spacing:1px;padding:8px 18px;border-radius:999px}
-.status.VALID{background:var(--valid-bg);color:var(--valid)}
-.status.EXPIRED{background:var(--expired-bg);color:var(--expired)}
-.status.SUSPENDED{background:var(--suspended-bg);color:var(--suspended)}
-.status.REVOKED,.status.INVALID{background:var(--invalid-bg);color:var(--invalid)}
-.reason{margin:10px 0 0;font-size:13px;color:#475569}
+body{
+  margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:26px 18px;
+  background:
+    radial-gradient(85% 55% at 50% 0%, rgba(241,208,34,.16), transparent 62%),
+    linear-gradient(165deg,#0c0733 0%,#060223 100%);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{width:100%;max-width:470px}
+.org{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;margin-bottom:20px}
+.org .seal{width:86px;height:86px;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.5))}
+.eyebrow{color:var(--gold);font-size:10px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;margin:0}
+.org h1{color:#fff;font-size:14.5px;margin:0;line-height:1.45;text-transform:uppercase;letter-spacing:.05em}
+.rule{width:56px;height:3px;background:var(--gold);border-radius:2px}
+
+.card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45);border-top:4px solid var(--gold)}
+.banner{padding:22px 20px;text-align:center;background:linear-gradient(180deg,#fbfbfe,#f4f5fa);border-bottom:1px solid var(--line)}
+.banner .status{display:inline-block;font-size:19px;font-weight:900;letter-spacing:.1em;padding:9px 20px;border-radius:999px;text-transform:uppercase}
+.status.VALID{background:var(--valid-bg);color:var(--valid);border:1px solid rgba(18,131,63,.3)}
+.status.EXPIRED{background:var(--expired-bg);color:var(--expired);border:1px solid rgba(164,90,8,.3)}
+.status.SUSPENDED{background:var(--suspended-bg);color:var(--suspended);border:1px solid rgba(179,86,11,.3)}
+.status.REVOKED,.status.INVALID{background:var(--revoked-bg);color:var(--revoked);border:1px solid rgba(179,18,27,.3)}
+.reason{margin:11px 0 0;font-size:13px;color:#475569;line-height:1.55}
 .body{padding:20px}
-.photo{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--line);background:#f1f5f9}
 .identity{display:flex;gap:14px;align-items:center;margin-bottom:16px}
-.identity h2{margin:0 0 4px;font-size:19px;line-height:1.25}
-.identity .sub{margin:0;font-size:13px;color:var(--muted)}
-dl{margin:0;display:grid;grid-template-columns:40% 60%;gap:8px 10px;font-size:14px}
-dt{color:var(--muted)}
-dd{margin:0;font-weight:600;word-break:break-word}
-.privacy{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.5}
-.footer{margin-top:14px;text-align:center;color:#94a3b8;font-size:12px}
-.badge-internal{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
-@media print{body{background:#fff;padding:0}.card{box-shadow:none}}
+.photo{width:76px;height:76px;border-radius:12px;object-fit:cover;border:2px solid var(--gold);background:#f1f5f9}
+.identity h2{margin:0 0 5px;font-size:18px;line-height:1.25;color:var(--navy-900)}
+.identity .sub{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
+dl{margin:0;display:grid;grid-template-columns:42% 58%;gap:10px 10px;font-size:13.5px}
+dt{color:var(--muted);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;padding-top:2px}
+dd{margin:0;font-weight:700;color:var(--ink);word-break:break-word}
+.privacy{
+  margin-top:16px;font-size:11.5px;color:var(--muted);line-height:1.6;
+  background:#fbfbfe;border:1px solid var(--line);border-radius:10px;padding:11px 13px;
+}
+.footer{margin-top:16px;text-align:center;color:#94a3b8;font-size:11.5px;letter-spacing:.05em}
+@media print{
+  body{background:#fff;padding:0}
+  .card{box-shadow:none;border:1px solid var(--line)}
+}
+@media (max-width:420px){
+  dl{grid-template-columns:1fr;gap:4px 0}
+  dt{margin-top:8px}
+}
 `;
 
 function row(label: string, value: unknown, mono = false): string {
@@ -60,7 +78,7 @@ export async function renderVerifyPage(env: Env, request: Request, token: string
   const checkedAt = manilaDateTime();
 
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(token)) {
-    return page(invalidCard('INVALID CODE', 'This verification code is malformed.', checkedAt));
+    return page(invalidCard('Invalid Code', 'This verification code is malformed.', checkedAt));
   }
 
   const tokenHash = await sha256Hex(token);
@@ -80,7 +98,7 @@ export async function renderVerifyPage(env: Env, request: Request, token: string
       ${showPhoto ? `<img class="photo" src="${escapeHtml(record.profile_photo)}" alt="Profile photo of ${escapeHtml(record.full_name)}">` : ''}
       <div>
         <h2>${escapeHtml(record.full_name)}</h2>
-        <p class="sub">${escapeHtml(formatMulti(record.position))} · ${escapeHtml(formatMulti(record.group_name))}</p>
+        <p class="sub">${escapeHtml(formatMulti(record.position))}<br>${escapeHtml(formatMulti(record.group_name))}</p>
       </div>
     </div>`;
 
@@ -89,7 +107,7 @@ export async function renderVerifyPage(env: Env, request: Request, token: string
       ${publicShowsPersonnelId(env) ? row('Personnel ID', record.personnel_id, true) : ''}
       ${row('Group', formatMulti(record.group_name))}
       ${row('Position', formatMulti(record.position))}
-      ${row('Valid Until', isValidDateString(record.valid_until) ? record.valid_until : 'Not specified')}
+      ${row('Valid Until', isValidDateString(record.valid_until) ? record.valid_until : 'Not Specified')}
       ${row('Record Status', record.status.toUpperCase())}
       ${publicAddressMode(env) === 'full' ? row('Address', record.address) : ''}
     </dl>
@@ -109,7 +127,7 @@ export async function renderVerifyPage(env: Env, request: Request, token: string
         ${details}
       </div>
     </div>
-    <p class="footer">Verified at ${escapeHtml(checkedAt)}</p>`;
+    <p class="footer">Verified At ${escapeHtml(checkedAt)}</p>`;
 
   // ACTIVE/VALID => 200; every non-valid state still renders with 200 so the
   // page displays correctly in browsers (the status itself is the signal).
@@ -124,11 +142,11 @@ function invalidCard(label: string, reason: string, checkedAt: string): string {
         <p class="reason">${escapeHtml(reason)}</p>
       </div>
       <div class="body">
-        <p class="privacy">This QR code is not recognised by the Brigada Onse registry.
+        <p class="privacy" style="margin-top:0">This QR code is not recognised by the Brigada Onse registry.
         Ask the bearer to present a newly issued identification, or contact the organization.</p>
       </div>
     </div>
-    <p class="footer">Checked at ${escapeHtml(checkedAt)}</p>`;
+    <p class="footer">Checked At ${escapeHtml(checkedAt)}</p>`;
 }
 
 function page(body: string, status = 200): Response {
@@ -139,17 +157,20 @@ function page(body: string, status = 200): Response {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Personnel Verification — ${ORGANIZATION_SHORT}</title>
+<meta name="theme-color" content="#060223">
+<title>Personnel Verification — Brigada Onse</title>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" href="/assets/logo.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <style>${STYLES}</style>
 </head>
 <body>
 <main class="wrap">
   <header class="org">
-    <div class="crest" aria-hidden="true">BO</div>
-    <div>
-      <h1>${escapeHtml(ORGANIZATION)}</h1>
-      <p>Official personnel verification</p>
-    </div>
+    <img class="seal" src="/assets/logo.png" alt="Brigada Onse Seal">
+    <p class="eyebrow">Parañaque's Finest</p>
+    <h1>${escapeHtml(ORGANIZATION)}</h1>
+    <div class="rule" aria-hidden="true"></div>
   </header>
   ${body}
 </main>

@@ -359,6 +359,31 @@ is why the dashboard reports **“Missing git connection.”**
 | Status rules incl. Manila boundary and all four failure states | ✅ |
 | Auth, CSRF, origin check, rate limiting, address privacy, SQL/XSS attempts | ✅ |
 
+## 11. Branding assets
+
+The seal, favicon and app icons come from the official Brigada Onse SVFAR logo
+(`Brigada Onse SVFAR Logo.png`, supplied by the organization) and live in [`public/`](public):
+
+| File | Purpose |
+|---|---|
+| `public/favicon.ico` | 64×64 + 32×32 PNG frames wrapped in an ICO container |
+| `public/assets/logo.png` | Sidebar, sign-in header, verification page, ID card (160 px tall) |
+| `public/assets/logo-large.png` | High-density display (384 px tall) |
+| `public/assets/apple-touch-icon.png` | 180×180 home-screen icon |
+
+Colour tokens in the stylesheets are sampled from the seal — deep navy `#060223`,
+bright gold `#F1D022`, fire red `#B3121B`. To re-derive the assets from a new logo file:
+
+```bash
+ffmpeg -i logo.png -vf "scale=-2:160"                 public/assets/logo.png
+ffmpeg -i logo.png -vf "scale=-2:384,palettegen"      -y pal.png
+ffmpeg -i logo.png -i pal.png -lavfi "scale=-2:384[x];[x][1:v]paletteuse" public/assets/logo-large.png
+ffmpeg -i logo.png -vf "scale=180:180:force_original_aspect_ratio=decrease,pad=180:180:(ow-iw)/2:(oh-ih)/2:color=white" public/assets/apple-touch-icon.png
+```
+
+Copy style: headings and labels are set in ALL CAPS (letter-spaced); sentences and
+controls use an initial capital.
+
 ---
 
 ## Notes on data handling

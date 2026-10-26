@@ -216,7 +216,7 @@ function shell(title, sub, body) {
   <div class="shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="crest">BO</div>
+        <img class="brand-logo" src="/assets/logo.png" alt="Brigada Onse Seal" />
         <div><strong>Brigada Onse</strong><span>QR Verification</span></div>
       </div>
       ${link('/dashboard', 'Dashboard')}
@@ -254,11 +254,12 @@ function loginView() {
   return `
   <div class="login-wrap">
     <div class="login-card">
-      <div class="brand" style="padding:0 0 16px">
-        <div class="crest">BO</div>
+      <div class="login-head">
+        <img src="/assets/logo.png" alt="Brigada Onse Seal" />
         <div><strong>Brigada Onse</strong><span>Personnel Administration</span></div>
       </div>
-      <h1>${state.setupMode ? 'Create administrator account' : 'Administrator sign in'}</h1>
+      <div class="login-body">
+      <h1>${state.setupMode ? 'Create Administrator Account' : 'Administrator Sign In'}</h1>
       <p class="sub">${state.setupMode
         ? 'One-time setup. This page closes permanently once an account exists.'
         : 'Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc.'}</p>
@@ -274,14 +275,15 @@ function loginView() {
         ${state.setupMode ? `
         <label class="field"><span>Display name (optional)</span>
           <input type="text" name="display_name" /></label>` : ''}
-        <button class="btn" style="width:100%;justify-content:center" type="submit">
-          ${state.setupMode ? 'Create account' : 'Sign in'}</button>
+        <button class="btn" style="width:100%" type="submit">
+          ${state.setupMode ? 'Create Account' : 'Sign In'}</button>
       </form>
-      <p class="sub" style="margin-top:14px">
+      <p class="sub" style="margin-top:16px;margin-bottom:0">
         ${state.setupMode
-          ? '<a href="#" id="toggle-setup">Back to sign in</a>'
-          : '<a href="#" id="toggle-setup">First time? Set up the administrator account</a>'}
+          ? '<a href="#" id="toggle-setup">Back To Sign In</a>'
+          : '<a href="#" id="toggle-setup">First Time? Set Up The Administrator Account</a>'}
       </p>
+      </div>
     </div>
   </div>`;
 }
@@ -804,8 +806,7 @@ async function printIdCard(id) {
   .right { width:40%; background:#0f172a; color:#fff; display:flex; flex-direction:column;
            align-items:center; justify-content:center; padding:2mm; gap:1.5mm; }
   .hdr { display:flex; align-items:center; gap:2mm; border-bottom:.3mm solid #e2e8f0; padding-bottom:1.5mm; }
-  .crest { width:8mm; height:8mm; border-radius:50%; background:#b91c1c; color:#fff; font-weight:800;
-           font-size:3mm; display:flex; align-items:center; justify-content:center; }
+  .crest { width:9mm; height:9mm; object-fit:contain; background:transparent; border:0; }
   .org { font-size:2.4mm; font-weight:800; line-height:1.15; }
   .org span { display:block; font-weight:500; color:#64748b; font-size:2.1mm; }
   .row { display:flex; gap:2mm; margin-top:2mm; }
@@ -815,15 +816,14 @@ async function printIdCard(id) {
   .name { font-size:3.6mm; font-weight:800; line-height:1.1; }
   .role { font-size:2.5mm; color:#475569; margin-top:.6mm; }
   .kv { margin-top:auto; font-size:2.3mm; display:grid; grid-template-columns:14mm 1fr; gap:.6mm; }
-  .kv b { color:#64748b; font-weight:600; }
+  .kv b { color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.15mm; font-size:2.1mm; }
   .right svg, .right img { width:20mm; height:20mm; background:#fff; padding:.8mm; border-radius:1mm; }
   .tid { font-size:2.5mm; font-weight:700; letter-spacing:.2mm; }
   .hint { font-size:2mm; text-align:center; color:#cbd5e1; }
 </style></head><body>
 <div class="card">
-  <div class="left">
-    <div class="hdr">
-      <div class="crest">BO</div>
+  <div class="left">      <div class="hdr">
+      <img class="crest" src="${location.origin}/assets/logo.png" alt="Brigada Onse Seal" />
       <div class="org">BRIGADA ONSE<span>Sun Valley Fire &amp; Rescue<br>Volunteer Group, Inc.</span></div>
     </div>
     <div class="row">

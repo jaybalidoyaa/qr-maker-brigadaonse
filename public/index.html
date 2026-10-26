@@ -6,16 +6,24 @@
     <title>Brigada Onse — Personnel QR Verification</title>
     <meta
       name="description"
-      content="Public QR verification for Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc. personnel."
+      content="Official QR verification for Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc. personnel."
     />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <meta name="theme-color" content="#060223" />
     <style>
       :root {
-        --bg: #0f172a;
+        --navy-900: #060223;
+        --navy-800: #0c0733;
+        --navy-700: #16114b;
+        --gold: #f1d022;
+        --gold-deep: #cdb351;
+        --ink: #0b0a1f;
+        --muted: #6b7386;
+        --line: #e6e8f0;
         --card: #ffffff;
-        --ink: #0f172a;
-        --muted: #64748b;
-        --line: #e2e8f0;
-        --brand: #b91c1c;
+        --red: #b3121b;
       }
       * { box-sizing: border-box; }
       body {
@@ -24,65 +32,128 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 24px;
-        background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        padding: 32px 20px;
+        background:
+          radial-gradient(85% 60% at 50% 0%, rgba(241, 208, 34, 0.16), transparent 62%),
+          linear-gradient(165deg, var(--navy-800) 0%, var(--navy-900) 100%);
         color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
-      .wrap { width: 100%; max-width: 480px; text-align: center; }
-      .org { display: flex; align-items: center; gap: 12px; justify-content: center; color: #e2e8f0; margin-bottom: 18px; text-align: left; }
-      .crest {
-        width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: #fff;
-        display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px;
-        border: 2px solid rgba(255, 255, 255, 0.35);
+      .wrap { width: 100%; max-width: 560px; }
+
+      .org {
+        display: flex; flex-direction: column; align-items: center;
+        text-align: center; gap: 14px; margin-bottom: 26px;
       }
-      .org h1 { font-size: 15px; margin: 0; line-height: 1.3; }
-      .org p { margin: 2px 0 0; font-size: 12px; color: #94a3b8; }
-      .card { background: var(--card); border-radius: 16px; padding: 26px 24px; box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35); }
-      .card h2 { margin: 0 0 8px; font-size: 18px; }
-      .card p { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+      .org img {
+        width: 104px; height: 104px; object-fit: contain;
+        filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+      }
+      .eyebrow {
+        color: var(--gold); font-size: 11px; font-weight: 800;
+        letter-spacing: 0.28em; text-transform: uppercase; margin: 0;
+      }
+      .org h1 {
+        color: #fff; font-size: 20px; margin: 0; line-height: 1.35;
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .rule { width: 64px; height: 3px; background: var(--gold); border-radius: 2px; }
+
+      .card {
+        background: var(--card); border-radius: 18px; overflow: hidden;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+        border-top: 4px solid var(--gold);
+      }
+      .card-body { padding: 30px 30px 26px; }
+      .card h2 {
+        margin: 0 0 12px; font-size: 17px; color: var(--navy-900);
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .card p { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.65; }
       code {
-        display: block; background: #f8fafc; border: 1px dashed var(--line); border-radius: 8px;
-        padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 12px; word-break: break-all; text-align: left; color: #334155;
+        display: block; background: var(--navy-900); color: var(--gold);
+        border-radius: 10px; padding: 13px 15px; margin: 0 0 16px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px; word-break: break-all; text-align: left;
+        border: 1px dashed rgba(241, 208, 34, 0.45);
       }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
       .btn {
-        display: inline-block; margin-top: 16px; padding: 10px 18px; border-radius: 8px;
-        background: var(--brand); color: #fff; text-decoration: none; font-weight: 600; font-size: 13.5px;
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 12px 20px; border-radius: 10px; text-decoration: none;
+        font-size: 13px; font-weight: 800; letter-spacing: 0.05em;
+        text-transform: uppercase; transition: transform 0.12s ease, filter 0.12s ease;
       }
-      .btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
-      .foot { margin-top: 16px; color: #94a3b8; font-size: 12px; }
-      .foot a { color: #cbd5e1; }
-      @media (max-width: 480px) { body { padding: 16px; } }
+      .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+      .btn.primary {
+        background: linear-gradient(180deg, #f7db3f, var(--gold));
+        color: var(--navy-900); box-shadow: 0 6px 16px rgba(241, 208, 34, 0.35);
+      }
+      .btn.ghost { background: transparent; color: var(--navy-800); border: 1px solid var(--line); }
+      .btn.ghost:hover { border-color: var(--gold-deep); }
+
+      .facts {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+        background: var(--line); border-top: 1px solid var(--line);
+      }
+      .fact { background: #fbfbfe; padding: 15px 12px; text-align: center; }
+      .fact b {
+        display: block; color: var(--navy-900); font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.09em;
+      }
+      .fact span { color: var(--muted); font-size: 11.5px; }
+
+      .foot {
+        margin-top: 22px; text-align: center; color: #94a3b8; font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+      .foot a { color: var(--gold); text-decoration: none; }
+      .foot a:hover { text-decoration: underline; }
+
+      @media (max-width: 520px) {
+        .card-body { padding: 24px 20px 22px; }
+        .facts { grid-template-columns: 1fr; }
+        .org img { width: 88px; height: 88px; }
+      }
     </style>
   </head>
   <body>
     <main class="wrap">
       <header class="org">
-        <div class="crest" aria-hidden="true">BO</div>
-        <div>
-          <h1>Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc.</h1>
-          <p>Official personnel verification</p>
-        </div>
+        <img src="/assets/logo.png" alt="Brigada Onse Seal" />
+        <p class="eyebrow">Parañaque's Finest</p>
+        <h1>Brigada Onse Sun Valley Fire and Rescue Volunteer Group, Inc.</h1>
+        <div class="rule" aria-hidden="true"></div>
       </header>
 
       <section class="card">
-        <h2>Personnel QR Verification</h2>
-        <p>
-          Scan the QR code printed on a Brigada Onse identification card. Each card opens a
-          permanent verification address in the form:
-        </p>
-        <code>https://qr.brigadaonse.org/verify/&lt;verification-token&gt;</code>
-        <p style="margin-top: 14px">
-          The verification page shows the record's current status — valid, expired, suspended or
-          revoked — directly from the registry. Residential addresses are never shown publicly.
-        </p>
-        <a class="btn" href="/admin/">Administrator sign in</a>
-        <a class="btn secondary" href="/api/health">System status</a>
+        <div class="card-body">
+          <h2>Personnel QR Verification</h2>
+          <p>
+            Scan the QR code printed on any Brigada Onse identification card. Each card opens a
+            permanent verification address in the form:
+          </p>
+          <code>https://qr.brigadaonse.org/verify/&lt;verification-token&gt;</code>
+          <p>
+            The verification page reports the record's current status — valid, expired, suspended
+            or revoked — served live from the registry. Residential addresses are never shown
+            publicly.
+          </p>
+          <div class="actions">
+            <a class="btn primary" href="/admin/">Administrator Sign In</a>
+            <a class="btn ghost" href="/api/health">System Status</a>
+          </div>
+        </div>
+        <div class="facts">
+          <div class="fact"><b>Instant</b><span>Live status on every scan</span></div>
+          <div class="fact"><b>Permanent</b><span>QR link never changes</span></div>
+          <div class="fact"><b>Private</b><span>Address stays internal</span></div>
+        </div>
       </section>
 
       <p class="foot">
-        Scan a code to verify, or contact the organization to report a misuse.
+        Scan a code to verify · Report misuse to the organization
       </p>
     </main>
   </body>

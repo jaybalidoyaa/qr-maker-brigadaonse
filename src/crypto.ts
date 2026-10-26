@@ -7,10 +7,22 @@ import type { Env } from './config';
 import { fromBase64, HttpError, toBase64, timingSafeEqual } from './util';
 
 const textEncoder = new TextEncoder();
-export const PBKDF2_ITERATIONS = 600_000;
+
+/**
+ * workerd's WebCrypto rejects PBKDF2 iteration counts above 100000, so this is
+ * a hard platform ceiling — hashing at a higher work factor throws and would
+ * make sign-in and first-run setup fail.
+ */
+export const PBKDF2_MAX_ITERATIONS = 100_000;
+export const PBKDF2_ITERATIONS = 100_000;
 
 /** Hash format: pbkdf2-sha256$<iterations>$<base64 salt>$<base64 hash> */
 export async function hashPassword(password: string, iterations = PBKDF2_ITERATIONS): Promise<string> {
+  if (!Number.isFinite(iterations) || iterations < 1000 || iterations > PBKDF2_MAX_ITERATIONS) {
+    throw new Error(
+      `PBKDF2 iterations must be between 1000 and ${PBKDF2_MAX_ITERATIONS} (Workers WebCrypto limit).`,
+    );
+  }
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey('raw', textEncoder.encode(password), 'PBKDF2', false, [
     'deriveBits',
@@ -27,7 +39,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const parts = (stored ?? '').split('$');
   if (parts.length !== 4 || parts[0] !== 'pbkdf2-sha256') return false;
   const iterations = Number.parseInt(parts[1], 10);
-  if (!Number.isFinite(iterations) || iterations < 1000 || iterations > 5_000_000) return false;
+  if (!Number.isFinite(iterations) || iterations < 1000 || iterations > PBKDF2_MAX_ITERATIONS) {
+    // Includes hashes written at a work factor this platform cannot execute:
+    // they must fail closed rather than 500 on every sign-in attempt.
+    return false;
+  }
 
   let salt: Uint8Array;
   let expected: Uint8Array;

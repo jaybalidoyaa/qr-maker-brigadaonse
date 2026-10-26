@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decryptToken, encryptToken, hashPassword, verifyPassword } from '../src/crypto';
+import { decryptToken, encryptToken, hashPassword, PBKDF2_ITERATIONS, PBKDF2_MAX_ITERATIONS, verifyPassword } from '../src/crypto';
 import {
   HttpError,
   escapeHtml,
@@ -43,6 +43,21 @@ describe('password hashing', () => {
   it('never stores the plaintext password', async () => {
     const stored = await hashPassword('SuperSecret123!', 10_000);
     expect(stored).not.toContain('SuperSecret123!');
+  });
+
+  it('stays within the workerd PBKDF2 ceiling of 100000 iterations', () => {
+    // Raising this above the ceiling makes sign-in and first-run setup fail
+    // in production with "iteration counts above 100000 are not supported".
+    expect(PBKDF2_ITERATIONS).toBeLessThanOrEqual(100_000);
+    expect(PBKDF2_MAX_ITERATIONS).toBe(100_000);
+  });
+
+  it('refuses to hash at an unsupported work factor', async () => {
+    await expect(hashPassword('pw', 600_000)).rejects.toThrow(/100000/);
+  });
+
+  it('fails closed for hashes written above the platform ceiling', async () => {
+    expect(await verifyPassword('pw', 'pbkdf2-sha256$600000$AAAA$AAAA')).toBe(false);
   });
 });
 

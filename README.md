@@ -67,8 +67,10 @@ suspend/reactivate/revoke · audit history (global and per record) · expiration
 (expired, expiring within 30 days, suspended).
 
 **Security**
-- Passwords: PBKDF2-HMAC-SHA256, 600,000 iterations, 16-byte random salt (WebCrypto).
-  No plaintext passwords, no default production credentials.
+- Passwords: PBKDF2-HMAC-SHA256, **100,000 iterations** (the maximum workerd's WebCrypto
+  accepts — higher counts throw), 16-byte random salt (WebCrypto). No plaintext passwords,
+  no default production credentials; hashes stored above the platform ceiling fail closed
+  instead of erroring.
 - Sessions: server-side rows storing only the SHA-256 of the token; cookie is
   `HttpOnly; Secure; SameSite=Strict` with a sliding 12-hour expiry.
 - CSRF: `Origin`/`Referer` must match on every state-changing request **and** admin mutations
@@ -139,7 +141,7 @@ Applied from [`migrations/`](migrations):
   (`active|suspended|revoked` CHECK), `remarks`, `date_registered`, `created_by`,
   `created_at`, `updated_at` + indexes on name, group, status, validity date, created_at.
 - **admin_users** — `username` UNIQUE (case-insensitive), `password_hash`
-  (`pbkdf2-sha256$600000$salt$hash`), `display_name`, `role`, `is_active`, timestamps.
+  (`pbkdf2-sha256$100000$salt$hash`), `display_name`, `role`, `is_active`, timestamps.
 - **sessions** — SHA-256 of the session token, admin FK, CSRF token, expiry, last seen.
 - **login_attempts** — keyed by SHA-256(username|IP), attempt counter, window, lock-until.
 - **audit_logs** — actor, action, entity type/id/label, JSON metadata, timestamp.
@@ -162,6 +164,11 @@ production variables and `workers_dev: true`.
 (created 2026-10-26 in the account `951c…367e`) is already in both the top-level and
 `env.production` blocks. If you fork this into a different Cloudflare account, run
 `npm run db:create` and replace that value. A D1 database ID is an identifier, not a secret.
+
+The config also sets `limits.cpu_ms: 5000`, giving password hashing headroom — workerd's
+WebCrypto refuses PBKDF2 iteration counts above 100000, so the app hashes at exactly that
+ceiling (`src/crypto.ts`). Raising `PBKDF2_ITERATIONS` above it makes sign-in and first-run
+setup fail in production.
 
 ---
 
@@ -336,7 +343,7 @@ is why the dashboard reports **“Missing git connection.”**
 | Check | Result |
 |---|---|
 | `npm run build` (TypeScript, strict) | ✅ 0 errors |
-| `npm test` (vitest, 4 files) | ✅ 42/42 passing |
+| `npm test` (vitest, 4 files) | ✅ 45/45 passing |
 | `node scripts/smoke-test.mjs` against `wrangler dev` + local D1 | ✅ 74/74 passing |
 | Status rules incl. Manila boundary and all four failure states | ✅ |
 | Auth, CSRF, origin check, rate limiting, address privacy, SQL/XSS attempts | ✅ |

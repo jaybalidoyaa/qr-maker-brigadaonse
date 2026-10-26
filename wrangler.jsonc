@@ -3,6 +3,9 @@
   "name": "brigada-onse-qr-verification",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-26",
+  "limits": {
+    "cpu_ms": 5000
+  },
   "observability": {
     "enabled": true
   },
@@ -30,6 +33,9 @@
   "env": {
     "production": {
       "name": "brigada-onse-qr-verification",
+      "limits": {
+        "cpu_ms": 5000
+      },
       "routes": [
         {
           "pattern": "qr.brigadaonse.org",

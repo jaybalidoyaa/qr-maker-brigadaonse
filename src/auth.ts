@@ -281,8 +281,11 @@ export async function authenticate(
     .first<AdminRow>();
   if (!admin || admin.is_active !== 1) {
     // Burn comparable CPU time so unknown usernames are not distinguishable
-    // from wrong passwords by response timing.
-    await hashPassword(password).catch(() => undefined);
+    // from wrong passwords by response timing. Failures are logged, never
+    // surfaced (that would leak which usernames exist).
+    await hashPassword(password).catch((err) => {
+      console.error('pbkdf2 timing-burn failed:', err instanceof Error ? err.message : String(err));
+    });
     return null;
   }
   const ok = await verifyPassword(password, admin.password_hash);

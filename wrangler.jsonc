@@ -14,7 +14,7 @@
     {
       "binding": "DB",
       "database_name": "brigada-onse-qr",
-      "database_id": "REPLACE_WITH_ACTUAL_D1_DATABASE_ID",
+      "database_id": "aa53163e-cf6a-4906-8cba-769398d7c045",
       "migrations_dir": "migrations"
     }
   ],
@@ -30,6 +30,14 @@
   "env": {
     "production": {
       "name": "brigada-onse-qr-verification",
+      "routes": [
+        {
+          "pattern": "verify.brigadaonse.org",
+          "custom_domain": true
+        }
+      ],
+      "workers_dev": true,
+      "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "production",
         "PUBLIC_BASE_URL": "https://verify.brigadaonse.org",
@@ -43,7 +51,7 @@
         {
           "binding": "DB",
           "database_name": "brigada-onse-qr",
-          "database_id": "REPLACE_WITH_ACTUAL_D1_DATABASE_ID",
+          "database_id": "aa53163e-cf6a-4906-8cba-769398d7c045",
           "migrations_dir": "migrations"
         }
       ]

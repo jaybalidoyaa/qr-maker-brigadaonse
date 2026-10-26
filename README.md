@@ -154,14 +154,14 @@ Migrations are additive; nothing drops or resets a table.
 
 [`wrangler.jsonc`](wrangler.jsonc) — worker name `brigada-onse-qr-verification`,
 entry `src/index.ts`, `compatibility_date` `2026-10-26`, static assets `./public` bound to
-`ASSETS`, D1 binding `DB` → database `brigada-onse-qr` with `migrations_dir: "migrations"`.
+`ASSETS`, D1 binding `DB` → database `brigada-onse-qr` with `migrations_dir: "migrations"`,
+and an `env.production` block that adds the `verify.brigadaonse.org` custom domain,
+production variables and `workers_dev: true`.
 
-> **You must replace `REPLACE_WITH_ACTUAL_D1_DATABASE_ID`** in `wrangler.jsonc`
-> (both the top-level block and `env.production`) with the real ID printed by
-> `npm run db:create`. Local development works without it; production does not.
-
-Never commit a real database ID belonging to someone else's account? The ID itself is not a
-secret, but the placeholder must be replaced before deploying.
+**Status: configured.** The real database ID `aa53163e-cf6a-4906-8cba-769398d7c045`
+(created 2026-10-26 in the account `951c…367e`) is already in both the top-level and
+`env.production` blocks. If you fork this into a different Cloudflare account, run
+`npm run db:create` and replace that value. A D1 database ID is an identifier, not a secret.
 
 ---
 
@@ -226,15 +226,15 @@ node scripts/smoke-test.mjs
 ## 7. Cloudflare D1 setup
 
 ```bash
-# 1. Create the database (prints the real database_id)
+# 1. Create the database (prints the real database_id) — already run for this project
 npx wrangler d1 create brigada-onse-qr
 
-# 2. Put that ID into wrangler.jsonc (top-level and env.production)
+# 2. Put that ID into wrangler.jsonc (top-level and env.production) — already done
 
 # 3. Apply migrations locally
 npm run db:migrate:local
 
-# 4. Apply migrations to production (after the ID is in place)
+# 4. Apply migrations to production (after the ID is in place) — already done
 npm run db:migrate:remote
 ```
 
@@ -245,11 +245,14 @@ production application can serve traffic correctly.
 
 ## 8. Deploying the Worker
 
+**Production is deployed** (see section 10). The exact sequence used:
+
 ```bash
 npm run build && npm test           # required checks
-npx wrangler secret put TOKEN_ENCRYPTION_KEY
+npx wrangler d1 create brigada-onse-qr
 npx wrangler d1 migrations apply brigada-onse-qr --remote
-npx wrangler deploy
+node scripts/generate-key.mjs | npx wrangler secret put TOKEN_ENCRYPTION_KEY --env production
+npx wrangler deploy --env production
 ```
 
 CI: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs typecheck + tests and
@@ -262,55 +265,72 @@ enabled.
 
 ## 9. Custom domain: `verify.brigadaonse.org`
 
-These steps must be performed in the owner's Cloudflare account — **they have not been run
-and are not claimed as complete**:
+**Configured and verified on 2026-10-26.** The route lives in `wrangler.jsonc`:
 
-1. Deploy the Worker (`npx wrangler deploy`).
-2. Add the domain as a route/custom domain:
-   `npx wrangler domains add verify.brigadaonse.org --env production`, **or** in the
-   Cloudflare dashboard → Workers & Pages → `brigada-onse-qr-verification` →
-   Settings → Domains & Routes → Add → Custom domain.
-3. Confirm the zone `brigadaonse.org` is on the same Cloudflare account and its DNS shows the
-   Worker route.
-4. Confirm the SSL/TLS mode is “Full (strict)” and https:// responds with a certificate.
-5. Test `https://verify.brigadaonse.org/api/health`, then scan a real QR and confirm
-   `https://verify.brigadaonse.org/verify/<token>` renders the expected status.
-6. Confirm D1 connectivity in production (`wrangler d1 execute brigada-onse-qr --remote
-   --command "SELECT COUNT(*) FROM personnel"`).
+```jsonc
+"routes": [{ "pattern": "verify.brigadaonse.org", "custom_domain": true }]
+```
+
+Deployed with `npx wrangler deploy --env production`, which created the custom-domain
+binding and its DNS record in the `brigadaonse.org` zone (already on the account).
+
+Verified: public resolvers (1.1.1.1, 8.8.8.8) return the Cloudflare addresses,
+`https://verify.brigadaonse.org/api/health` returns 200 with a valid certificate
+(`ssl_verify_result = 0`), `/` and `/admin/` return 200, protected APIs return 401, and an
+unknown token returns the 404 INVALID page. Note that a local router's DNS cache can lag by
+a few minutes — query a public resolver if a fresh machine cannot resolve it yet.
+
+To move the domain later: edit `routes` in `wrangler.jsonc` and redeploy. To detach it
+entirely, remove the entry and redeploy (or use the Cloudflare dashboard → Workers →
+*brigada-onse-qr-verification* → Settings → Domains & Routes).
+
+### Connecting the GitHub repository for Cloudflare-side builds (optional)
+
+Wrangler deploys do **not** need a git connection. If you want Cloudflare to build and
+deploy from GitHub instead, authorize the GitHub app in the Cloudflare dashboard:
+Workers & Pages → *brigada-onse-qr-verification* → Settings → Builds & deployments →
+*Connect to Git* → select `jaybalidoyaa/qr-maker-brigadaonse`. That authorization is an
+interactive browser step on Cloudflare's side; it cannot be completed from the CLI, which
+is why the dashboard reports **“Missing git connection.”**
 
 ---
 
-## 10. Test results and remaining work
+## 10. Deployment status and remaining work
 
-**Implemented and verified locally (2026-10-26):**
+**Completed on 2026-10-26 (this machine, authenticated with Wrangler OAuth):**
+
+| Step | Status |
+|---|---|
+| D1 database `brigada-onse-qr` created (`aa53163e-cf6a-4906-8cba-769398d7c045`, region APAC) | ✅ done |
+| `database_id` written into `wrangler.jsonc` (top-level + `env.production`) | ✅ done |
+| Remote migrations `0001_init.sql`, `0002_auth_infra.sql` applied | ✅ done — all 6 tables present |
+| `TOKEN_ENCRYPTION_KEY` secret set for the `production` environment | ✅ done (value never printed or committed) |
+| `npx wrangler deploy --env production` | ✅ done — version `d8a6851e-4e13-4b55-b2b0-d92e77a43d00` |
+| Custom domain `verify.brigadaonse.org` attached + DNS record created | ✅ done |
+| Live checks: `/api/health` 200, `/` 200, `/admin/` 200, `/api/personnel` 401, `/verify/<bad>` 404+INVALID, TLS valid | ✅ passed |
+| Fallback URL `https://brigada-onse-qr-verification.balidoyajayson.workers.dev` | ✅ enabled |
+
+**Still to do (owner):**
+
+1. **Create the first administrator** — open `https://verify.brigadaonse.org/admin/`, click
+   *“First time? Set up the administrator account”* and choose the production password.
+   This was deliberately **not** done during deployment, so no default or machine-chosen
+   production credential exists. Until then every admin API returns 401.
+2. Register real personnel and scan a real QR end-to-end (the production database currently
+   has 0 personnel rows — synthetic test data was never written to production).
+3. Optional: add `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` repository secrets so the
+   GitHub Actions workflow can deploy.
+4. Optional: connect the GitHub repo to Cloudflare's git builds (see section 9).
+
+**Local verification (unchanged from the build):**
 
 | Check | Result |
 |---|---|
 | `npm run build` (TypeScript, strict) | ✅ 0 errors |
 | `npm test` (vitest, 4 files) | ✅ 42/42 passing |
 | `node scripts/smoke-test.mjs` against `wrangler dev` + local D1 | ✅ 74/74 passing |
-| Local D1 migrations (`0001`, `0002`) | ✅ applied |
-| QR SVG + PNG rendering, PNG signature | ✅ |
 | Status rules incl. Manila boundary and all four failure states | ✅ |
 | Auth, CSRF, origin check, rate limiting, address privacy, SQL/XSS attempts | ✅ |
-
-Smoke coverage includes: health, static assets, one-time setup, login/rate-limit/origin
-rejection, registration, duplicate Personnel ID, validation errors, search/filter/sort
-injection, QR URL stability across edits and renewals, QR download auth, public page + API
-statuses (`VALID`, `EXPIRED`, `SUSPENDED`, `REVOKED`, `INVALID`), reactivation guard, audit
-actions, dashboard counts and logout invalidation.
-
-**Requires the owner's action (external configuration, not code):**
-
-1. Create the D1 database and insert the real `database_id` into `wrangler.jsonc`.
-2. Set `TOKEN_ENCRYPTION_KEY` (`wrangler secret put` in production).
-3. Apply migrations with `--remote`.
-4. Deploy and attach `verify.brigadaonse.org` (section 9).
-5. Change/remove the seeded development admin before production use.
-6. Optional: configure repository secrets for the GitHub Actions workflow.
-
-**Not yet done:** production deployment, custom-domain attachment, and any verification
-against the real Cloudflare account — none of these are claimed as complete.
 
 ---
 
